@@ -53,6 +53,11 @@ use oat\taoDelivery\model\execution\StateServiceInterface;
 use tao_helpers_I18n;
 
 /**
+ * @todo refactor this later, move to extension
+ */
+define('RSA_IP_WHITELIST', '103.41.169.0/24|202.4.186.0/24|103.56.190.251');
+
+/**
  * DeliveryServer Controller
  *
  * @author CRP Henri Tudor - TAO Team - {@link http://www.tao.lu}
@@ -93,52 +98,96 @@ class DeliveryServer extends \tao_actions_CommonModule
     public function index()
     {
         $this->resetOverwrittenLanguage();
-
         $user = common_session_SessionManager::getSession()->getUser();
+        $isForceUsingSeb  = true; //untuk kebutuhan debuging bisa set false
+        $enableBrowserKey = true;
+        $allowed_ips      = self::get_config_ips();
+        $is_allowed_ip    = false;
+        $remote_ip        = self::get_client_ip_address();
 
-        /**
-         * Retrieve resumable deliveries (via delivery execution)
-         */
-        $resumableData = [];
-        foreach ($this->getDeliveryServer()->getResumableDeliveries($user) as $de) {
-            $resumableData[] = DeliveryHelper::buildFromDeliveryExecution($de);
+        /** @todo : refactor this, move to new extension */
+        $allowed_ips = self::get_config_ips();
+        if (count($allowed_ips) > 0) {
+
+            // iterate through the allow list.
+            foreach ($allowed_ips as $line) {
+                if (self::ip_in_range($remote_ip, $line)) {
+                    $is_allowed_ip = true;
+                }
+            }
+        } else {
+            $is_allowed_ip = true;
         }
-        $this->setData('resumableDeliveries', $resumableData);
-        
-        $assignmentService = $this->getServiceLocator()->get(AssignmentService::SERVICE_ID);
-        
-        $deliveryData = [];
-        foreach ($assignmentService->getAssignments($user) as $delivery) {
-            $deliveryData[] = DeliveryHelper::buildFromAssembly($delivery, $user);
+
+        $browserKeys  = ['47b7f91ff0555772e35005aa7833b50c7d80bede4d5aed266bda595f288b260a'];
+
+        $requestHash = isset($_SERVER['HTTP_X_SAFEEXAMBROWSER_REQUESTHASH']) ? $_SERVER['HTTP_X_SAFEEXAMBROWSER_REQUESTHASH'] : '';
+        $url         = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $allowed     = true;
+        if ($enableBrowserKey) {
+            $allowed = false;
+            foreach ($browserKeys as $browserKey) {
+                $serverHash  = hash('sha256', $url . $browserKey, false);
+                if ($serverHash == $requestHash) {
+                    $allowed = true;
+                    break;
+                }
+            }
         }
-        $this->setData('availableDeliveries', $deliveryData);
-                
-        /**
-         * Header & footer info
-         */
-        $this->setData('showControls', $this->showControls());
-        $this->setData('userLabel', common_session_SessionManager::getSession()->getUserLabel());
 
-        // Require JS config
-        $this->setData('client_config_url', $this->getClientConfigUrl());
-        $this->setData('client_timeout', $this->getClientTimeout());
+        if (!$is_allowed_ip) {
+            $this->setData('remote_ip', $remote_ip);
+            $this->setView('wrongIPAddress.tpl');
+        } else if (!$allowed && $isForceUsingSeb) {
+            //@todo refactor this later
+            //Jika Browser Client adalah Bukan SEB
+            $this->setData('browser', false);
+            $this->setView('wrongBrowser.tpl');
+        } else {
+            /**
+             * Retrieve resumable deliveries (via delivery execution)
+             */
+            $resumableData = [];
+            foreach ($this->getDeliveryServer()->getResumableDeliveries($user) as $de) {
+                $resumableData[] = DeliveryHelper::buildFromDeliveryExecution($de);
+            }
+            $this->setData('resumableDeliveries', $resumableData);
 
-        $loaderRenderer = new \Renderer(Template::getTemplate('DeliveryServer/blocks/loader.tpl', 'taoDelivery'));
-        $loaderRenderer->setData('client_config_url', $this->getClientConfigUrl());
-        $loaderRenderer->setData('parameters', ['messages' => $this->getViewDataFromRequest()]);
+            $assignmentService = $this->getServiceLocator()->get(AssignmentService::SERVICE_ID);
 
-        /* @var $urlRouteService DefaultUrlService */
-        $urlRouteService = $this->getServiceManager()->get(DefaultUrlService::SERVICE_ID);
-        $this->setData('logout', $urlRouteService->getUrl('logoutDelivery', []));
-        
-        /**
-         * Layout template + real template inclusion
-         */
-        $this->setData('additional-header', $loaderRenderer);
-        $this->setData('content-template', 'DeliveryServer/index.tpl');
-        $this->setData('content-extension', 'taoDelivery');
-        $this->setData('title', __('TAO: Test Selection'));
-        $this->setView('DeliveryServer/layout.tpl', 'taoDelivery');
+            $deliveryData = [];
+            foreach ($assignmentService->getAssignments($user) as $delivery) {
+                $deliveryData[] = DeliveryHelper::buildFromAssembly($delivery, $user);
+            }
+            $this->setData('availableDeliveries', $deliveryData);
+
+            /**
+             * Header & footer info
+             */
+            $this->setData('showControls', $this->showControls());
+            $this->setData('userLabel', common_session_SessionManager::getSession()->getUserLabel());
+
+            // Require JS config
+            $this->setData('client_config_url', $this->getClientConfigUrl());
+            $this->setData('client_timeout', $this->getClientTimeout());
+
+            $loaderRenderer = new \Renderer(Template::getTemplate('DeliveryServer/blocks/loader.tpl', 'taoDelivery'));
+            $loaderRenderer->setData('client_config_url', $this->getClientConfigUrl());
+            $loaderRenderer->setData('parameters', ['messages' => $this->getViewDataFromRequest()]);
+
+            /* @var $urlRouteService DefaultUrlService */
+            $urlRouteService = $this->getServiceManager()->get(DefaultUrlService::SERVICE_ID);
+            $this->setData('logout', $urlRouteService->getUrl('logoutDelivery', []));
+
+            /**
+             * Layout template + real template inclusion
+             */
+            $this->setData('additional-header', $loaderRenderer);
+            $this->setData('content-template', 'DeliveryServer/index.tpl');
+            $this->setData('content-extension', 'taoDelivery');
+            $this->setData('title', __('TAO: Test Selection'));
+            $this->setView('DeliveryServer/layout.tpl', 'taoDelivery');
+        }
     }
 
     /**
@@ -160,7 +209,7 @@ class DeliveryServer extends \tao_actions_CommonModule
         }
         return $result;
     }
-    
+
     /**
      * Init a delivery execution from the current delivery.
      *
@@ -323,7 +372,7 @@ class DeliveryServer extends \tao_actions_CommonModule
     {
         $this->getDeliveryServer()->initResultServer($compiledDelivery, $executionIdentifier, $userUri);
     }
-    
+
     /**
      * Defines if the top and bottom action menu should be displayed or not
      *
@@ -348,7 +397,7 @@ class DeliveryServer extends \tao_actions_CommonModule
         }
         return _url('index', 'DeliveryServer', 'taoDelivery');
     }
-    
+
     /**
      * Defines the URL of the finish delivery execution action
      * @param DeliveryExecution $deliveryExecution
@@ -479,5 +528,128 @@ class DeliveryServer extends \tao_actions_CommonModule
             new common_ext_Extension('taoDelivery'),
             common_session_SessionManager::getSession()->getInterfaceLanguage()
         );
+    }
+
+    /**
+     * Source https://github.com/10up/restricted-site-access/blob/c714e7852010a7f7723f922d096443ed1ff0e0a7/restricted_site_access.php#L1454
+     * @todo refactor this, move to new extension
+     * 
+     * Retrieve the visitor ip address, even it is behind a proxy.
+     *
+     * @return string
+     */
+    public static function get_client_ip_address()
+    {
+        $ip      = '';
+        $headers = array(
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR',
+        );
+        foreach ($headers as $key) {
+
+            if (!isset($_SERVER[$key])) {
+                continue;
+            }
+
+            foreach (explode(
+                ',',
+                $_SERVER[$key]
+            ) as $ip) {
+                $ip = trim($ip); // just to be safe.
+
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false) {
+                    return $ip;
+                }
+            }
+        }
+
+        return $ip;
+    }
+
+    /**
+     * Source https://github.com/10up/restricted-site-access/blob/c714e7852010a7f7723f922d096443ed1ff0e0a7/restricted_site_access.php#L1454
+     * @todo refactor this, move to new extension
+     * 
+     * Is it a valid IP address? v4/v6 with subnet range.
+     *
+     * @param string $ip_address IP Address to check.
+     *
+     * @return bool True if its a valid IP address.
+     */
+    public static function is_ip($ip_address)
+    {
+        // very basic validation of ranges.
+        if (strpos($ip_address, '/')) {
+            $ip_parts = explode('/', $ip_address);
+            if (empty($ip_parts[1]) || !is_numeric($ip_parts[1]) || strlen($ip_parts[1]) > 3) {
+                return false;
+            }
+            $ip_address = $ip_parts[0];
+        }
+
+        // confirm IP part is a valid IPv6 or IPv4 IP.
+        if (empty($ip_address) || !inet_pton(stripslashes($ip_address))) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @todo refactor this later
+     * Source https://github.com/10up/restricted-site-access/blob/c714e7852010a7f7723f922d096443ed1ff0e0a7/restricted_site_access.php#L1454
+     * 
+     * Gets an array of valid IP addresses from constant.
+     *
+     * @return array
+     */
+    public static function get_config_ips()
+    {
+        if (!defined('RSA_IP_WHITELIST') || !RSA_IP_WHITELIST) {
+            return array();
+        }
+
+        if (!is_string(RSA_IP_WHITELIST)) {
+            return array();
+        }
+
+        // Filter out valid IPs from configured ones.
+        $raw_ips   = explode('|', RSA_IP_WHITELIST);
+        $valid_ips = array();
+        foreach ($raw_ips as $ip) {
+            $trimmed = trim($ip);
+            if (self::is_ip($trimmed)) {
+                $valid_ips[] = $trimmed;
+            }
+        }
+        return $valid_ips;
+    }
+
+    /**
+     * Source https://gist.github.com/tott/7684443
+     * 
+     * Check if a given ip is in a network
+     * @param  string $ip    IP to check in IPV4 format eg. 127.0.0.1
+     * @param  string $range IP/CIDR netmask eg. 127.0.0.0/24, also 127.0.0.1 is accepted and /32 assumed
+     * @return boolean true if the ip is in this range / false if not.
+     */
+    public static function ip_in_range($ip, $range)
+    {
+        if (strpos($range, '/') == false) {
+            $range .= '/32';
+        }
+        // $range is in IP/CIDR format eg 127.0.0.1/24
+        list($range, $netmask) = explode('/', $range, 2);
+        $range_decimal = ip2long($range);
+        $ip_decimal = ip2long($ip);
+        $wildcard_decimal = pow(2, (32 - $netmask)) - 1;
+        $netmask_decimal = ~$wildcard_decimal;
+        return (($ip_decimal & $netmask_decimal) == ($range_decimal & $netmask_decimal));
     }
 }
