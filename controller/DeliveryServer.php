@@ -55,7 +55,7 @@ use tao_helpers_I18n;
 /**
  * @todo refactor this later, move to extension
  */
-define('RSA_IP_WHITELIST', '103.41.169.0/24|202.4.186.0/24|103.56.190.251');
+define('RSA_IP_WHITELIST', '10.32.0.0/24|10.17.193.0/27|10.17.192.0/27|10.17.194.0/27|10.16.67.0/24|10.16.67.0/24|10.168.12.0/25|10.64.4.0/24|10.56.32.0/25|10.8.4.0/25|10.12.12.0/25|10.29.130.0/26|10.29.129.0/26');
 
 /**
  * DeliveryServer Controller
@@ -119,7 +119,7 @@ class DeliveryServer extends \tao_actions_CommonModule
             $is_allowed_ip = true;
         }
 
-        $browserKeys  = ['47b7f91ff0555772e35005aa7833b50c7d80bede4d5aed266bda595f288b260a'];
+        $browserKeys  = ['4e514599d8bf4a31c62be8fc6f17c0899a5ed2ef843f3180abbff932b55e4a1d',' e7d2ffeeb19e6cf5e1c7142f0d09d9425cd9fb568a8dfbb0b282019d47314156'];
 
         $requestHash = isset($_SERVER['HTTP_X_SAFEEXAMBROWSER_REQUESTHASH']) ? $_SERVER['HTTP_X_SAFEEXAMBROWSER_REQUESTHASH'] : '';
         $url         = $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
