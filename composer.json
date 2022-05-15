@@ -89,13 +89,23 @@
         {
             "type": "vcs",
             "url": "git@github.com:openthinklabs/composer-npm-bridge.git"
-        }        
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/openthinklabs/qti-sdk.git",
+            "no-api": true      
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/openthinklabs/lib-beeme.git",
+            "no-api": true      
+        }                             
     ],
     "require": {
       "openthinklabs/oatbox-extension-installer": "1.2.2",
-      "openthinklabs/generis" : "~15.11.0.5",
-      "openthinklabs/tao-core" : "~48.66.1.8",
-      "openthinklabs/extension-tao-outcome" : "~13.1.0.5"
+      "openthinklabs/generis" : "~15.19.2.1",
+      "openthinklabs/tao-core" : "~50.11.1.3",
+      "openthinklabs/extension-tao-outcome" : "~13.2.0.1"
     },
      "config": {
           "allow-plugins": {

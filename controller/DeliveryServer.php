@@ -23,6 +23,7 @@
 
 namespace oat\taoDelivery\controller;
 
+use tao_helpers_Display;
 use common_exception_NotFound;
 use common_exception_Unauthorized;
 use common_ext_Extension;
@@ -91,7 +92,6 @@ class DeliveryServer extends \tao_actions_CommonModule
      *
      * @access public
      * @author CRP Henri Tudor - TAO Team - {@link http://www.tao.lu}
-     * @param processDefinitionUri
      * @return void
      * @throws \common_exception_Error
      */
@@ -272,6 +272,10 @@ class DeliveryServer extends \tao_actions_CommonModule
     {
         $deliveryExecution = $this->getCurrentDeliveryExecution();
 
+        if (!in_array($deliveryExecution->getState()->getUri(), $this->getDeliveryServer()->getResumableStates())) {
+            $this->redirect($this->getReturnUrl());
+        }
+
         // Sets the deliveryId to session.
         if (!$this->hasSessionAttribute(DeliveryExecution::getDeliveryIdSessionKey($deliveryExecution->getIdentifier()))) {
             $this->setSessionAttribute(
@@ -284,8 +288,6 @@ class DeliveryServer extends \tao_actions_CommonModule
             $this->verifyDeliveryExecutionAuthorized($deliveryExecution);
         } catch (UnAuthorizedException $e) {
             $this->redirect($e->getErrorPage());
-
-            return;
         }
 
         $userUri = common_session_SessionManager::getSession()->getUserUri();
@@ -416,8 +418,7 @@ class DeliveryServer extends \tao_actions_CommonModule
      */
     protected function getAuthorizationProvider()
     {
-        $authService = $this->getServiceLocator()->get(AuthorizationService::SERVICE_ID);
-        return $authService->getAuthorizationProvider();
+        return $this->getServiceLocator()->get(AuthorizationService::SERVICE_ID)->getAuthorizationProvider();
     }
 
     /**
