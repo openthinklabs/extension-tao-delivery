@@ -15,7 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (c) 2013-2017 (original work) Open Assessment Technologies SA (under the project TAO-PRODUCT);
+ * Copyright (c) 2013-2022 (original work) Open Assessment Technologies SA (under the project TAO-PRODUCT);
  *
  */
 
@@ -176,7 +176,10 @@ class RdsDeliveryExecutionServiceTest extends TestCase
 
     public function testSpawnDeliveryExecution()
     {
-        $this->assertInstanceOf(DeliveryExecution::class, $this->classUnderTest->spawnDeliveryExecution("test", "test", "test", "test"));
+        $this->assertInstanceOf(
+            DeliveryExecution::class,
+            $this->classUnderTest->spawnDeliveryExecution("test", "test", "test", "test", "test")
+        );
     }
 
     public function testInitDeliveryExecution()
@@ -186,7 +189,10 @@ class RdsDeliveryExecutionServiceTest extends TestCase
         $resourceMock->getLabel()->willReturn("test");
         $resourceMock->getUri()->willReturn("test");
 
-        $this->assertInstanceOf(DeliveryExecution::class, $this->classUnderTest->initDeliveryExecution($resourceMock->reveal(), "test"));
+        $this->assertInstanceOf(
+            DeliveryExecution::class,
+            $this->classUnderTest->initDeliveryExecution($resourceMock->reveal(), "test")
+        );
     }
 
     public function testGetDeliveryExecution()
@@ -210,7 +216,8 @@ class RdsDeliveryExecutionServiceTest extends TestCase
             . RdsDeliveryExecutionService::COLUMN_STARTED_AT . ", "
             . RdsDeliveryExecutionService::COLUMN_LABEL
             . ") VALUES ("
-            . "'test', 'test', 'test', 'test', '', '" . $this->persistence->getPlatform()->getNowExpression() . "', 'test'"
+            . "'test', 'test', 'test', 'test', '', '"
+            . $this->persistence->getPlatform()->getNowExpression() . "', 'test'"
             . ")"
         ;
 

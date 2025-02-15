@@ -32,22 +32,11 @@ use core_kernel_classes_Resource;
  * @access public
  * @author Joel Bout, <joel@taotesting.com>
  * @package taoDelivery
-
  */
-class OntologyDeliveryExecution extends core_kernel_classes_Resource implements DeliveryExecutionInterface
+class OntologyDeliveryExecution extends core_kernel_classes_Resource implements
+    DeliveryExecutionInterface,
+    OriginalIdAwareDeliveryExecutionInterface
 {
-    const CLASS_URI = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#DeliveryExecution';
-    
-    const PROPERTY_DELIVERY = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#DeliveryExecutionDelivery';
-    
-    const PROPERTY_SUBJECT = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#DeliveryExecutionSubject';
-    
-    const PROPERTY_TIME_START = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#DeliveryExecutionStart';
-    
-    const PROPERTY_TIME_END = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#DeliveryExecutionEnd';
-    
-    const PROPERTY_STATUS = 'http://www.tao.lu/Ontologies/TAODelivery.rdf#StatusOfDeliveryExecution';
-
     private $startTime;
     private $finishTime;
     private $state;
@@ -59,6 +48,14 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
      * @see DeliveryExecution::getIdentifier()
      */
     public function getIdentifier()
+    {
+        return $this->getUri();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getOriginalIdentifier(): string
     {
         return $this->getUri();
     }
@@ -76,7 +73,7 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         return $this->startTime;
     }
 
-    
+
     /**
      * (non-PHPdoc)
      * @see DeliveryExecution::getFinishTime()
@@ -92,7 +89,7 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         }
         return $this->finishTime;
     }
-    
+
     /**
      * (non-PHPdoc)
      * @see DeliveryExecution::getState()
@@ -108,7 +105,7 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         }
         return $this->state;
     }
-    
+
     /**
      * @throws common_exception_ResourceNotFound
      * @see DeliveryExecution::getDelivery()
@@ -126,7 +123,7 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         }
         return $this->delivery;
     }
-    
+
     /**
      * (non-PHPdoc)
      * @see DeliveryExecution::getUserIdentifier()
@@ -139,7 +136,7 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         }
         return $this->userIdentifier;
     }
-    
+
     /**
      * (non-PHPdoc)
      * @see DeliveryExecution::setState()
@@ -171,7 +168,9 @@ class OntologyDeliveryExecution extends core_kernel_classes_Resource implements 
         $property = $this->getProperty($propertyName);
         $propertyValue = $this->getOnePropertyValue($property);
         if (is_null($propertyValue)) {
-            throw new common_exception_NotFound('Property ' . $propertyName . ' not found for resource ' . $this->getUri());
+            throw new common_exception_NotFound(
+                'Property ' . $propertyName . ' not found for resource ' . $this->getUri()
+            );
         }
 
         return $propertyValue;

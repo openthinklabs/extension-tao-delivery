@@ -15,10 +15,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Copyright (c) 2002-2008 (original work) Public Research Centre Henri Tudor & University of Luxembourg (under the project TAO & TAO2);
- *               2008-2010 (update and modification) Deutsche Institut für Internationale Pädagogische Forschung (under the project TAO-TRANSFER);
- *               2009-2012 (update and modification) Public Research Centre Henri Tudor (under the project TAO-SUSTAIN & TAO-DEV);
- *
+ * Copyright (c) 2002-2008 (original work) Public Research Centre Henri Tudor & University of Luxembourg
+ *                         (under the project TAO & TAO2);
+ *               2008-2010 (update and modification) Deutsche Institut für Internationale Pädagogische Forschung
+ *                         (under the project TAO-TRANSFER);
+ *               2009-2012 (update and modification) Public Research Centre Henri Tudor
+ *                         (under the project TAO-SUSTAIN & TAO-DEV);
  */
 
 namespace oat\taoDelivery\controller;
@@ -114,32 +116,7 @@ class DeliveryServer extends \tao_actions_CommonModule
         }
         $this->setData('availableDeliveries', $deliveryData);
 
-        /**
-         * Header & footer info
-         */
-        $this->setData('showControls', $this->showControls());
-        $this->setData('userLabel', tao_helpers_Display::htmlEscape($session->getUserLabel()));
-
-        // Require JS config
-        $this->setData('client_config_url', $this->getClientConfigUrl());
-        $this->setData('client_timeout', $this->getClientTimeout());
-
-        $loaderRenderer = new \Renderer(Template::getTemplate('DeliveryServer/blocks/loader.tpl', 'taoDelivery'));
-        $loaderRenderer->setData('client_config_url', $this->getClientConfigUrl());
-        $loaderRenderer->setData('parameters', ['messages' => $this->getViewDataFromRequest()]);
-
-        /* @var $urlRouteService DefaultUrlService */
-        $urlRouteService = $this->getServiceManager()->get(DefaultUrlService::SERVICE_ID);
-        $this->setData('logout', $urlRouteService->getUrl('logoutDelivery', []));
-
-        /**
-         * Layout template + real template inclusion
-         */
-        $this->setData('additional-header', $loaderRenderer);
-        $this->setData('content-template', 'DeliveryServer/index.tpl');
-        $this->setData('content-extension', 'taoDelivery');
-        $this->setData('title', __('TAO: Test Selection'));
-        $this->setView('DeliveryServer/layout.tpl', 'taoDelivery');
+        $this->setTemplate('DeliveryServer/index.tpl', __('TAO: Test Selection'));
     }
 
     /**
@@ -151,7 +128,10 @@ class DeliveryServer extends \tao_actions_CommonModule
         $lookupParams = ['warning', 'error'];
         $result = [];
         foreach ($lookupParams as $lookupParam) {
-            if ($this->getRequest()->hasParameter($lookupParam) && !empty($this->getRequest()->getParameter($lookupParam))) {
+            if (
+                $this->getRequest()->hasParameter($lookupParam)
+                && !empty($this->getRequest()->getParameter($lookupParam))
+            ) {
                 $result[] = [
                     'level' => $lookupParam,
                     'content' => $this->getRequest()->getParameter($lookupParam),
@@ -168,10 +148,14 @@ class DeliveryServer extends \tao_actions_CommonModule
      * @throws common_exception_Unauthorized
      * @return DeliveryExecution the selected execution
      * @throws \common_exception_Error
+     *
+     * phpcs:disable PSR2.Methods.MethodDeclaration
      */
     protected function _initDeliveryExecution()
     {
-        $compiledDelivery  = new core_kernel_classes_Resource(\tao_helpers_Uri::decode($this->getRequestParameter('uri')));
+        $compiledDelivery  = new core_kernel_classes_Resource(
+            \tao_helpers_Uri::decode($this->getRequestParameter('uri'))
+        );
         $user              = common_session_SessionManager::getSession()->getUser();
 
         $assignmentService = $this->getServiceLocator()->get(AssignmentService::SERVICE_ID);
@@ -184,10 +168,15 @@ class DeliveryServer extends \tao_actions_CommonModule
         }
         $stateService = $this->getServiceLocator()->get(StateServiceInterface::SERVICE_ID);
         /** @var DeliveryExecution $deliveryExecution */
-        $deliveryExecution = $stateService->createDeliveryExecution($compiledDelivery->getUri(), $user, $compiledDelivery->getLabel());
+        $deliveryExecution = $stateService->createDeliveryExecution(
+            $compiledDelivery->getUri(),
+            $user,
+            $compiledDelivery->getLabel()
+        );
 
         return $deliveryExecution;
     }
+    // phpcs:enable PSR2.Methods.MethodDeclaration
 
 
     /**
@@ -198,7 +187,16 @@ class DeliveryServer extends \tao_actions_CommonModule
         try {
             $deliveryExecution = $this->_initDeliveryExecution();
             //if authorized we can move to this URL.
-            $this->redirect(_url('runDeliveryExecution', null, null, ['deliveryExecution' => $deliveryExecution->getIdentifier()]));
+            $this->redirect(
+                _url(
+                    'runDeliveryExecution',
+                    null,
+                    null,
+                    [
+                        'deliveryExecution' => $deliveryExecution->getIdentifier(),
+                    ]
+                )
+            );
         } catch (UnAuthorizedException $e) {
             $this->redirect($e->getErrorPage());
         } catch (common_exception_Unauthorized $e) {
@@ -222,6 +220,17 @@ class DeliveryServer extends \tao_actions_CommonModule
      */
     public function runDeliveryExecution(): void
     {
+        if ($this->hasGetParameter('waitingPage')) {
+            $this->setData('delivery-execution-url', $this->getGetParameter('deliveryExecutionUrl'));
+            $this->setData('block-title', __('Authorized, you may proceed'));
+            $this->setData('scope', 'waiting-page');
+            $this->setData('hideHomeButton', true);
+            $this->setData('hideLogoutButton', true);
+            $this->setTemplate('DeliveryServer/waiting_page.tpl', __('Waiting page'));
+
+            return;
+        }
+
         $deliveryExecution = $this->getCurrentDeliveryExecution();
 
         if (!in_array($deliveryExecution->getState()->getUri(), $this->getDeliveryServer()->getResumableStates())) {
@@ -229,7 +238,9 @@ class DeliveryServer extends \tao_actions_CommonModule
         }
 
         // Sets the deliveryId to session.
-        if (!$this->hasSessionAttribute(DeliveryExecution::getDeliveryIdSessionKey($deliveryExecution->getIdentifier()))) {
+        if (
+            !$this->hasSessionAttribute(DeliveryExecution::getDeliveryIdSessionKey($deliveryExecution->getIdentifier()))
+        ) {
             $this->setSessionAttribute(
                 DeliveryExecution::getDeliveryIdSessionKey($deliveryExecution->getIdentifier()),
                 $deliveryExecution->getDelivery()->getUri()
@@ -244,7 +255,9 @@ class DeliveryServer extends \tao_actions_CommonModule
 
         $userUri = common_session_SessionManager::getSession()->getUserUri();
         if ($deliveryExecution->getUserIdentifier() != $userUri) {
-            throw new common_exception_Error('User ' . $userUri . ' is not the owner of the execution ' . $deliveryExecution->getIdentifier());
+            throw new common_exception_Error(
+                'User ' . $userUri . ' is not the owner of the execution ' . $deliveryExecution->getIdentifier()
+            );
         }
 
         $delivery = $deliveryExecution->getDelivery();
@@ -310,9 +323,44 @@ class DeliveryServer extends \tao_actions_CommonModule
             $stateService = $this->getServiceManager()->get(StateServiceInterface::SERVICE_ID);
             $stateService->finish($deliveryExecution);
         } else {
-            common_Logger::w('Non owner ' . common_session_SessionManager::getSession()->getUserUri() . ' tried to finish deliveryExecution ' . $deliveryExecution->getIdentifier());
+            common_Logger::w(
+                'Non owner ' . common_session_SessionManager::getSession()->getUserUri()
+                    . ' tried to finish deliveryExecution ' . $deliveryExecution->getIdentifier()
+            );
         }
         $this->redirect($this->getReturnUrl());
+    }
+
+    private function setTemplate(string $template, string $title)
+    {
+        $session = common_session_SessionManager::getSession();
+
+        /**
+         * Header & footer info
+         */
+        $this->setData('showControls', $this->showControls());
+        $this->setData('userLabel', tao_helpers_Display::htmlEscape($session->getUserLabel()));
+
+        // Require JS config
+        $this->setData('client_config_url', $this->getClientConfigUrl());
+        $this->setData('client_timeout', $this->getClientTimeout());
+
+        $loaderRenderer = new \Renderer(Template::getTemplate('DeliveryServer/blocks/loader.tpl', 'taoDelivery'));
+        $loaderRenderer->setData('client_config_url', $this->getClientConfigUrl());
+        $loaderRenderer->setData('parameters', ['messages' => $this->getViewDataFromRequest()]);
+
+        /* @var $urlRouteService DefaultUrlService */
+        $urlRouteService = $this->getServiceManager()->get(DefaultUrlService::SERVICE_ID);
+        $this->setData('logout', $urlRouteService->getUrl('logoutDelivery', []));
+
+        /**
+         * Layout template + real template inclusion
+         */
+        $this->setData('additional-header', $loaderRenderer);
+        $this->setData('content-template', $template);
+        $this->setData('content-extension', 'taoDelivery');
+        $this->setData('title', $title);
+        $this->setView('DeliveryServer/layout.tpl', 'taoDelivery');
     }
 
     /**
@@ -347,7 +395,11 @@ class DeliveryServer extends \tao_actions_CommonModule
     {
         if ($this->getServiceLocator()->has(ReturnUrlService::SERVICE_ID)) {
             $deliveryExecution = $this->getCurrentDeliveryExecution();
-            return $this->getServiceLocator()->get(ReturnUrlService::SERVICE_ID)->getReturnUrl($deliveryExecution->getIdentifier());
+
+            return $this
+                ->getServiceLocator()
+                ->get(ReturnUrlService::SERVICE_ID)
+                ->getReturnUrl($deliveryExecution->getIdentifier());
         }
         return _url('index', 'DeliveryServer', 'taoDelivery');
     }
@@ -359,7 +411,14 @@ class DeliveryServer extends \tao_actions_CommonModule
      */
     protected function getfinishDeliveryExecutionUrl(DeliveryExecution $deliveryExecution)
     {
-        return _url('finishDeliveryExecution', null, null, ['deliveryExecution' => $deliveryExecution->getIdentifier()]);
+        return _url(
+            'finishDeliveryExecution',
+            null,
+            null,
+            [
+                'deliveryExecution' => $deliveryExecution->getIdentifier(),
+            ]
+        );
     }
 
 
@@ -408,7 +467,9 @@ class DeliveryServer extends \tao_actions_CommonModule
     {
         $eventManager = $this->getServiceLocator()->get(EventManager::SERVICE_ID);
 
-        $logins = common_session_SessionManager::getSession()->getUser()->getPropertyValues(GenerisRdf::PROPERTY_USER_LOGIN);
+        $logins = common_session_SessionManager::getSession()
+            ->getUser()
+            ->getPropertyValues(GenerisRdf::PROPERTY_USER_LOGIN);
         $eventManager->trigger(new LogoutSucceedEvent(current($logins)));
 
         common_session_SessionManager::endSession();
