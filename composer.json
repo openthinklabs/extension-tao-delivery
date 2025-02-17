@@ -58,9 +58,9 @@
 		}
 	},
     "require": {
-      "openthinklabs/oatbox-extension-installer": "~1.1||dev-master",
-      "openthinklabs/generis" : ">=15.22||dev-master",
-      "openthinklabs/tao-core" : ">=50.24.6||dev-master",
-      "openthinklabs/extension-tao-outcome" : ">=13.0.0||dev-master"
+      "openthinklabs/oatbox-extension-installer": "dev-master",
+      "openthinklabs/generis" : "dev-master",
+      "openthinklabs/tao-core" : "dev-master",
+      "openthinklabs/extension-tao-outcome" : "dev-master"
     }
 }
